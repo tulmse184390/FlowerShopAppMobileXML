@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">FlowerShopApp</string>
+    <string name="app_text_logo">Flower</string>
+    <string name="sign_in_text">Sign in</string>
+    <string name="sign_up_text">Sign up</string>
+    <string name="email_address_text">Email address</string>
+    <string name="password_text">Password</string>
+    <string name="view_text">View</string>
+    <string name="username_text">Username</string>
+    <string name="confirm_password_text">Confirm Password</string>
+    <string name="email_text">Email</string>
+    <string name="phone_number_text">Phone Number</string>
+    <string name="fullname_text">FullName</string>
+    <string name="address_text">Address</string>
+</resources>
