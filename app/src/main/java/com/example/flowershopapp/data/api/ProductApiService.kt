@@ -3,9 +3,11 @@ package com.example.flowershopapp.data.api
 import com.example.flowershopapp.data.model.ApiResponse
 import com.example.flowershopapp.data.model.CategoryDto
 import com.example.flowershopapp.data.model.PagedResult
+import com.example.flowershopapp.data.model.ProductDetailDto
 import com.example.flowershopapp.data.model.ProductDto
 import retrofit2.Response
 import retrofit2.http.GET
+import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface ProductApiService {
@@ -23,4 +25,7 @@ interface ProductApiService {
         @Query("PageIndex") pageIndex: Int = 1,
         @Query("PageSize") pageSize: Int = 6
     ): Response<ApiResponse<PagedResult<ProductDto>>>
+
+    @GET("api/Products/{id}")
+    suspend fun getProductDetail(@Path("id") id: Int): retrofit2.Response<ApiResponse<ProductDetailDto>>
 }

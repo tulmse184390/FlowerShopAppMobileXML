@@ -15,6 +15,9 @@
         android:theme="@style/Theme.FlowerShopApp"
         android:usesCleartextTraffic="true">
         <activity
+            android:name=".ui.products.ProductDetailActivity"
+            android:exported="false" />
+        <activity
             android:name=".ui.products.ProductsListActivity"
             android:exported="false" />
         <activity

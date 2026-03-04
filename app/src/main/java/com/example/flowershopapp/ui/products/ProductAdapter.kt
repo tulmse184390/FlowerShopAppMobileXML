@@ -8,7 +8,7 @@ import com.example.flowershopapp.data.model.ProductDto
 import com.example.flowershopapp.databinding.ItemProductBinding
 
 class ProductAdapter(
-    private val onCartClick: (ProductDto) -> Unit
+    private val onProductClick: (ProductDto) -> Unit
 ) : RecyclerView.Adapter<ProductAdapter.ProductViewHolder>() {
 
     private var productList = listOf<ProductDto>()
@@ -43,8 +43,8 @@ class ProductAdapter(
                 .load(product.imageUrl)
                 .into(binding.ivProductImage)
 
-            binding.btnAddToCart.setOnClickListener {
-                onCartClick(product)
+            binding.root.setOnClickListener {
+                onProductClick(product)
             }
         }
     }

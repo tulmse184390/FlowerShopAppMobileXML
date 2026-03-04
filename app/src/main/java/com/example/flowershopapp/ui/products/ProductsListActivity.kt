@@ -41,7 +41,9 @@ class ProductsListActivity : AppCompatActivity() {
         binding.rvCategories.adapter = categoryAdapter
 
         productAdapter = ProductAdapter { clickedProduct ->
-            android.widget.Toast.makeText(this, "Added ${clickedProduct.productName} to cart!", android.widget.Toast.LENGTH_SHORT).show()
+            val intent = android.content.Intent(this, ProductDetailActivity::class.java)
+            intent.putExtra("PRODUCT_ID", clickedProduct.productId)
+            startActivity(intent)
         }
         binding.rvProducts.adapter = productAdapter
 
