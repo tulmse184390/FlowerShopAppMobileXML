@@ -4,12 +4,11 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
-import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import com.example.flowershopapp.MainActivity
 import com.example.flowershopapp.data.model.RegisterRequestDto
 import com.example.flowershopapp.databinding.ActivityRegisterBinding
+import com.example.flowershopapp.ui.products.ProductsListActivity
 
 class RegisterActivity : AppCompatActivity() {
 
@@ -43,7 +42,7 @@ class RegisterActivity : AppCompatActivity() {
                 val sharedPref = getSharedPreferences("FlowerShopPrefs", Context.MODE_PRIVATE)
                 sharedPref.edit().putString("ACCESS_TOKEN", token).apply()
 
-                startActivity(Intent(this, MainActivity::class.java))
+                startActivity(Intent(this, ProductsListActivity::class.java))
                 finish()
             }
         }

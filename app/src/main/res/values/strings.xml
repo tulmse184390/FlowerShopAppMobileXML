@@ -12,4 +12,5 @@
     <string name="phone_number_text">Phone Number</string>
     <string name="fullname_text">FullName</string>
     <string name="address_text">Address</string>
+    <string name="welcome_nfullname_text">Welcome,\nFullName</string>
 </resources>

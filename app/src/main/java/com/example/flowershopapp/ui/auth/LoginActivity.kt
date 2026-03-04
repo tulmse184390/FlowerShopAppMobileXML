@@ -3,17 +3,11 @@ package com.example.flowershopapp.ui.auth
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import com.example.flowershopapp.databinding.ActivityLoginBinding
-import androidx.lifecycle.lifecycleScope
-import com.example.flowershopapp.MainActivity
-import com.example.flowershopapp.data.api.RetrofitClient
-import com.example.flowershopapp.data.model.LoginRequestDto
-import kotlinx.coroutines.launch
-import java.io.IOException
 import androidx.activity.viewModels
+import com.example.flowershopapp.ui.products.ProductsListActivity
 
 class LoginActivity : AppCompatActivity() {
     private lateinit var binding: ActivityLoginBinding
@@ -49,7 +43,7 @@ class LoginActivity : AppCompatActivity() {
                 val sharedPref = getSharedPreferences("FlowerShopPrefs", Context.MODE_PRIVATE)
                 sharedPref.edit().putString("ACCESS_TOKEN", token).apply()
 
-                startActivity(Intent(this, MainActivity::class.java))
+                startActivity(Intent(this, ProductsListActivity::class.java))
                 finish()
             }
         }

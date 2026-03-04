@@ -50,6 +50,7 @@ dependencies {
     implementation(libs.retrofit2.converter.gson)
     implementation(libs.activity.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
+    implementation(libs.glide)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
