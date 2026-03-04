@@ -8,7 +8,8 @@ import com.example.flowershopapp.data.model.ProductDto
 import com.example.flowershopapp.databinding.ItemProductBinding
 
 class ProductAdapter(
-    private val onProductClick: (ProductDto) -> Unit
+    private val onItemClick: (ProductDto) -> Unit,
+    private val onAddToCartClick: (ProductDto) -> Unit
 ) : RecyclerView.Adapter<ProductAdapter.ProductViewHolder>() {
 
     private var productList = listOf<ProductDto>()
@@ -32,11 +33,8 @@ class ProductAdapter(
     inner class ProductViewHolder(private val binding: ItemProductBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(product: ProductDto) {
             binding.tvProductName.text = product.productName
-
             val formatter = java.text.NumberFormat.getNumberInstance(java.util.Locale("vi", "VN"))
-            val formattedPrice = formatter.format(product.price)
-            binding.tvProductPrice.text = "$formattedPrice VNĐ"
-
+            binding.tvProductPrice.text = "${formatter.format(product.price)} VNĐ"
             binding.tvBriefDescription.text = product.briefDescription ?: "No description"
 
             Glide.with(binding.root.context)
@@ -44,7 +42,11 @@ class ProductAdapter(
                 .into(binding.ivProductImage)
 
             binding.root.setOnClickListener {
-                onProductClick(product)
+                onItemClick(product)
+            }
+
+            binding.btnAddToCart.setOnClickListener {
+                onAddToCartClick(product)
             }
         }
     }

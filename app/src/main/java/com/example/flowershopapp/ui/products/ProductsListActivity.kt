@@ -40,11 +40,19 @@ class ProductsListActivity : AppCompatActivity() {
         }
         binding.rvCategories.adapter = categoryAdapter
 
-        productAdapter = ProductAdapter { clickedProduct ->
-            val intent = android.content.Intent(this, ProductDetailActivity::class.java)
-            intent.putExtra("PRODUCT_ID", clickedProduct.productId)
-            startActivity(intent)
-        }
+        productAdapter = ProductAdapter(
+            onItemClick = { clickedProduct ->
+                val intent = android.content.Intent(this, ProductDetailActivity::class.java)
+                intent.putExtra("PRODUCT_ID", clickedProduct.productId)
+                startActivity(intent)
+            },
+            onAddToCartClick = { clickedProduct ->
+                val sharedPref = getSharedPreferences("FlowerShopPrefs", Context.MODE_PRIVATE)
+                val token = sharedPref.getString("ACCESS_TOKEN", null)
+                viewModel.addToCart(token, clickedProduct.productId, 1)
+            }
+        )
+
         binding.rvProducts.adapter = productAdapter
 
         pageAdapter = PageAdapter { selectedPage ->
@@ -132,6 +140,12 @@ class ProductsListActivity : AppCompatActivity() {
         viewModel.errorMessage.observe(this) { errorMsg ->
             if (errorMsg != null) {
                 Toast.makeText(this, errorMsg, Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        viewModel.addToCartSuccess.observe(this) { message ->
+            if (message != null) {
+                android.widget.Toast.makeText(this, message, android.widget.Toast.LENGTH_SHORT).show()
             }
         }
     }

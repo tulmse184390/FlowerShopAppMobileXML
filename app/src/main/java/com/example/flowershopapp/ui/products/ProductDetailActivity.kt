@@ -54,6 +54,13 @@ class ProductDetailActivity : AppCompatActivity() {
         viewModel.errorMessage.observe(this) { error ->
             if (error != null) Toast.makeText(this, error, Toast.LENGTH_SHORT).show()
         }
+
+        viewModel.addToCartSuccess.observe(this) { message ->
+            if (message != null) {
+                Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+                finish()
+            }
+        }
     }
 
     private fun setupListeners() {
@@ -78,8 +85,14 @@ class ProductDetailActivity : AppCompatActivity() {
         }
 
         binding.btnAddToCart.setOnClickListener {
-            Toast.makeText(this, "Added $currentQuantity to cart!", Toast.LENGTH_SHORT).show()
-            finish()
+            val sharedPref = getSharedPreferences("FlowerShopPrefs", android.content.Context.MODE_PRIVATE)
+            val token = sharedPref.getString("ACCESS_TOKEN", null)
+
+            val productId = intent.getIntExtra("PRODUCT_ID", -1)
+
+            if (productId != -1) {
+                viewModel.addToCart(token, productId, currentQuantity)
+            }
         }
     }
 }

@@ -24,12 +24,41 @@ class ProductsListViewModel : ViewModel() {
     private val _productsData = MutableLiveData<PagedResult<ProductDto>>()
     val productsData: LiveData<PagedResult<ProductDto>> get() = _productsData
 
+    private val _addToCartSuccess = MutableLiveData<String?>()
+    val addToCartSuccess: LiveData<String?> get() = _addToCartSuccess
+
     var currentSearch: String? = null
     var currentCategoryId: Int? = null
     var currentMinPrice: Double? = null
     var currentMaxPrice: Double? = null
     var currentSortBy: String? = null
     var currentPageIndex: Int = 1
+
+    fun addToCart(token: String?, productId: Int, quantity: Int = 1) {
+        if (token.isNullOrEmpty()) {
+            _errorMessage.value = "Please sign in to buy!"
+            return
+        }
+
+        _addToCartSuccess.value = null
+
+        viewModelScope.launch {
+            try {
+                val request = com.example.flowershopapp.data.model.AddToCartRequestDto(productId, quantity)
+                val authHeader = "Bearer $token"
+
+                val response = RetrofitClient.cartApi.addToCart(authHeader, request)
+
+                if (response.isSuccessful && response.body()?.success == true) {
+                    _addToCartSuccess.value = response.body()?.message ?: "Add to cart successfully!"
+                } else {
+                    _errorMessage.value = response.body()?.message ?: "Add to cart failed!"
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = "Server error!"
+            }
+        }
+    }
 
     fun fetchCategories() {
         viewModelScope.launch {
