@@ -56,6 +56,12 @@ class CartActivity : AppCompatActivity() {
             }
         )
         binding.rvCartItems.adapter = cartAdapter
+
+        binding.btnCheckout.setOnClickListener {
+            val intent = android.content.Intent(this, com.example.flowershopapp.ui.checkout.CheckoutActivity::class.java)
+            startActivity(intent)
+            finish()
+        }
     }
 
     private fun setupObservers() {

@@ -15,6 +15,15 @@
         android:theme="@style/Theme.FlowerShopApp"
         android:usesCleartextTraffic="true">
         <activity
+            android:name=".ui.checkout.PaymentSuccessActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.checkout.PaymentWebViewActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.checkout.CheckoutActivity"
+            android:exported="false" />
+        <activity
             android:name=".ui.cart.CartActivity"
             android:exported="false" />
         <activity
