@@ -107,6 +107,11 @@ class ProductsListActivity : AppCompatActivity() {
             updateSortUI(isUpSelected = false)
             viewModel.fetchProducts(isRefresh = true)
         }
+
+        binding.btnCart.setOnClickListener {
+            val intent = android.content.Intent(this, com.example.flowershopapp.ui.cart.CartActivity::class.java)
+            startActivity(intent)
+        }
     }
 
     private fun performSearch() {
