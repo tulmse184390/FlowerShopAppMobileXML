@@ -1,31 +1,83 @@
 package com.example.flowershopapp.ui.products
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.util.Base64
+import android.view.inputmethod.EditorInfo
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
+import com.example.flowershopapp.data.api.RetrofitClient
 import com.example.flowershopapp.databinding.ActivityProductsListBinding
+import com.example.flowershopapp.ui.chat.ChatViewModel
+import com.example.flowershopapp.ui.chat.adapters.ChatAdapter
+import com.example.flowershopapp.utils.CartBadgeHelper
+import kotlinx.coroutines.launch
 import org.json.JSONObject
+import androidx.recyclerview.widget.LinearLayoutManager
 
 class ProductsListActivity : AppCompatActivity() {
     private lateinit var binding: ActivityProductsListBinding
     private val viewModel: ProductsListViewModel by viewModels()
+    private val chatViewModel: ChatViewModel by viewModels()
     private lateinit var categoryAdapter: CategoryAdapter
     private lateinit var productAdapter: ProductAdapter
     private lateinit var pageAdapter: PageAdapter
+    private lateinit var chatAdapter: ChatAdapter
+
+    private val notificationPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { _ -> }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityProductsListBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        CartBadgeHelper.createNotificationChannel(this)
+        requestNotificationPermission()
+
         setupUI()
         setupObservers()
+        setupFloatingChat()
 
         viewModel.fetchCategories()
         viewModel.fetchProducts(isRefresh = true)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        fetchCartBadge()
+    }
+
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
+
+    private fun fetchCartBadge() {
+        val sharedPref = getSharedPreferences("FlowerShopPrefs", Context.MODE_PRIVATE)
+        val token = sharedPref.getString("ACCESS_TOKEN", null) ?: return
+
+        lifecycleScope.launch {
+            try {
+                val response = RetrofitClient.cartApi.getMyCart("Bearer $token")
+                if (response.isSuccessful && response.body()?.success == true) {
+                    val count = response.body()?.data?.items?.size ?: 0
+                    CartBadgeHelper.updateBadge(binding.tvCartBadge, count)
+                }
+            } catch (_: Exception) { }
+        }
     }
 
     private fun setupUI() {
@@ -112,6 +164,102 @@ class ProductsListActivity : AppCompatActivity() {
             val intent = android.content.Intent(this, com.example.flowershopapp.ui.cart.CartActivity::class.java)
             startActivity(intent)
         }
+
+        binding.btnMap.setOnClickListener {
+            val intent = android.content.Intent(this, com.example.flowershopapp.ui.map.MapActivity::class.java)
+            startActivity(intent)
+        }
+
+        binding.btnFloatingChat.setOnClickListener {
+            showFloatingChat()
+        }
+    }
+
+    private fun setupFloatingChat() {
+        val sharedPref = getSharedPreferences("FlowerShopPrefs", Context.MODE_PRIVATE)
+        val token = sharedPref.getString("ACCESS_TOKEN", null)
+
+        chatAdapter = ChatAdapter()
+        binding.rvFloatingMessages.apply {
+            layoutManager = LinearLayoutManager(this@ProductsListActivity)
+            adapter = chatAdapter
+        }
+
+        chatViewModel.connectToChatHub(token)
+
+        binding.chatOutsideOverlay.setOnClickListener {
+            hideFloatingChat()
+        }
+
+        binding.btnMinimizeChat.setOnClickListener {
+            hideFloatingChat()
+        }
+
+        binding.chatFloatingPanel.setOnClickListener {
+            // Consume panel clicks so only outside clicks minimize chat.
+        }
+
+        binding.btnSendFloatingMessage.setOnClickListener {
+            sendFloatingMessage()
+        }
+
+        binding.edtFloatingMessage.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_SEND) {
+                sendFloatingMessage()
+                true
+            } else {
+                false
+            }
+        }
+
+        // Update status label when customer switches chat mode
+        binding.rgChatMode.setOnCheckedChangeListener { _, checkedId ->
+            when (checkedId) {
+                binding.rbAi.id -> binding.tvChatModeStatus.text = "🤖 Chatting with AI"
+                binding.rbStaff.id -> binding.tvChatModeStatus.text = "👤 Waiting for staff"
+            }
+        }
+
+        chatViewModel.messages.observe(this) { messages ->
+            chatAdapter.submitList(messages)
+            if (messages.isNotEmpty()) {
+                binding.rvFloatingMessages.scrollToPosition(messages.size - 1)
+            }
+        }
+
+        chatViewModel.errorMessage.observe(this) { error ->
+            if (!error.isNullOrBlank()) {
+                Toast.makeText(this, error, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun sendFloatingMessage() {
+        val message = binding.edtFloatingMessage.text.toString().trim()
+        if (message.isEmpty()) {
+            Toast.makeText(this, "Message cannot be empty", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (binding.rbAi.isChecked) {
+            chatViewModel.sendMessage(message)       // AI path → SendMessageToShop
+        } else {
+            chatViewModel.sendMessageToStaff(message) // Staff path → SendMessageToStaff
+        }
+
+        binding.edtFloatingMessage.text.clear()
+    }
+
+    private fun showFloatingChat() {
+        binding.chatOutsideOverlay.visibility = android.view.View.VISIBLE
+        binding.chatFloatingPanel.visibility = android.view.View.VISIBLE
+        binding.btnFloatingChat.visibility = android.view.View.GONE
+    }
+
+    private fun hideFloatingChat() {
+        binding.chatOutsideOverlay.visibility = android.view.View.GONE
+        binding.chatFloatingPanel.visibility = android.view.View.GONE
+        binding.btnFloatingChat.visibility = android.view.View.VISIBLE
     }
 
     private fun performSearch() {
@@ -151,7 +299,24 @@ class ProductsListActivity : AppCompatActivity() {
         viewModel.addToCartSuccess.observe(this) { message ->
             if (message != null) {
                 android.widget.Toast.makeText(this, message, android.widget.Toast.LENGTH_SHORT).show()
+                fetchCartBadge()
+                showCartNotificationAfterAdd()
             }
+        }
+    }
+
+    private fun showCartNotificationAfterAdd() {
+        val sharedPref = getSharedPreferences("FlowerShopPrefs", Context.MODE_PRIVATE)
+        val token = sharedPref.getString("ACCESS_TOKEN", null) ?: return
+
+        lifecycleScope.launch {
+            try {
+                val response = RetrofitClient.cartApi.getMyCart("Bearer $token")
+                if (response.isSuccessful && response.body()?.success == true) {
+                    val count = response.body()?.data?.items?.size ?: 0
+                    CartBadgeHelper.showCartNotification(this@ProductsListActivity, count)
+                }
+            } catch (_: Exception) { }
         }
     }
 
@@ -183,5 +348,10 @@ class ProductsListActivity : AppCompatActivity() {
 
         binding.tvSortUp.setTextColor(if (isUpSelected) pinkColor else grayColor)
         binding.tvSortDown.setTextColor(if (!isUpSelected) pinkColor else grayColor)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        chatViewModel.disconnectFromChatHub()
     }
 }

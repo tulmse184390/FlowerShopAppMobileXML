@@ -1,6 +1,6 @@
 [versions]
 activityKtx = "1.12.4"
-agp = "9.0.1"
+agp = "9.1.0"
 converterGson = "3.0.0"
 coreKtx = "1.17.0"
 glide = "5.0.5"
@@ -12,6 +12,8 @@ lifecycleViewmodelKtx = "2.10.0"
 material = "1.13.0"
 activity = "1.12.4"
 constraintlayout = "2.2.1"
+playServicesMaps = "19.0.0"
+playServicesLocation = "21.3.0"
 retrofit = "3.0.0"
 
 [libraries]
@@ -28,6 +30,8 @@ androidx-activity = { group = "androidx.activity", name = "activity", version.re
 androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
 retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }
 retrofit2-converter-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref = "converterGson" }
+play-services-maps = { module = "com.google.android.gms:play-services-maps", version.ref = "playServicesMaps" }
+play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesLocation" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
