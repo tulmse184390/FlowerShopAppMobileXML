@@ -107,6 +107,113 @@
             tools:listitem="@layout/item_store_location" />
     </LinearLayout>
 
+    <!-- Directions info card – shown after a route is drawn -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardDirectionsInfo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginBottom="16dp"
+        android:visibility="gone"
+        app:cardCornerRadius="18dp"
+        app:cardElevation="8dp"
+        app:cardBackgroundColor="@android:color/white">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- Store name -->
+            <TextView
+                android:id="@+id/tvDirectionsStoreName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="#111111"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="Store" />
+
+            <!-- Distance and duration row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="6dp"
+                android:gravity="center_vertical">
+
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@android:drawable/ic_menu_directions"
+                    app:tint="#F4487D" />
+
+                <TextView
+                    android:id="@+id/tvDirectionsDistance"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:textColor="#F4487D"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:text="-- km" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="14dp"
+                    android:layout_marginHorizontal="10dp"
+                    android:background="#CCCCCC" />
+
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@android:drawable/ic_menu_recent_history"
+                    app:tint="#555555" />
+
+                <TextView
+                    android:id="@+id/tvDirectionsDuration"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:textColor="#555555"
+                    android:textSize="14sp"
+                    android:text="-- min" />
+            </LinearLayout>
+
+            <!-- Action buttons -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="12dp"
+                android:gravity="end">
+
+                <Button
+                    android:id="@+id/btnClearRoute"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:text="Clear"
+                    android:textSize="13sp"
+                    android:layout_marginEnd="8dp"
+                    app:strokeColor="#CCCCCC" />
+
+                <Button
+                    android:id="@+id/btnNavigate"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:text="▶  Navigate"
+                    android:textSize="13sp"
+                    android:backgroundTint="#F4487D"
+                    android:textColor="@android:color/white" />
+            </LinearLayout>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
     <ProgressBar
         android:id="@+id/progressBar"
         android:layout_width="wrap_content"

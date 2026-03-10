@@ -49,6 +49,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
     private val markerMap = mutableMapOf<Int, Marker>()
     private val fusedLocationClient by lazy { LocationServices.getFusedLocationProviderClient(this) }
     private var pendingDirectionsStore: StoreLocationDto? = null
+    private var currentUserLocation: LatLng? = null   // remembered for the Navigate button
 
     private data class RouteResult(
         val path: List<LatLng>,
@@ -159,6 +160,16 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
 
             override fun afterTextChanged(s: Editable?) = Unit
         })
+
+        // ── Directions card buttons ──────────────────────────────────────────
+        binding.btnNavigate.setOnClickListener {
+            val store = selectedStore ?: return@setOnClickListener
+            openDirections(store)
+        }
+
+        binding.btnClearRoute.setOnClickListener {
+            hideDirectionsCard()
+        }
     }
 
     private fun setupObservers() {
@@ -226,6 +237,9 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
         map.clear()
         routePolyline = null
         markerMap.clear()
+        // Hide any stale directions card when map markers are redrawn
+        binding.cardDirectionsInfo.visibility = View.GONE
+        currentUserLocation = null
 
         if (stores.isEmpty()) {
             return
@@ -250,7 +264,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
 
         try {
             val bounds = boundsBuilder.build()
-            val padding = 100
+            val padding = 60
             map.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, padding))
         } catch (_: Exception) {
             // Single store or no stores - zoom to first
@@ -350,16 +364,28 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun onUserLocationObtained(location: Location, targetShop: StoreLocationDto) {
         val userLocation = LatLng(location.latitude, location.longitude)
+        currentUserLocation = userLocation
+
         val route = findShortestPath(userLocation, targetShop)
         drawRoute(route)
 
         bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
+        focusOnStore(targetShop)
+        showDirectionsCard(targetShop, route)
+    }
 
-        Toast.makeText(
-            this,
-            "Route: ${"%.2f".format(route.distanceKm)} km · ~${route.durationMinutes} min",
-            Toast.LENGTH_LONG
-        ).show()
+    private fun showDirectionsCard(store: StoreLocationDto, route: RouteResult) {
+        binding.tvDirectionsStoreName.text = store.storeName ?: "Store"
+        binding.tvDirectionsDistance.text = "%.2f km".format(route.distanceKm)
+        binding.tvDirectionsDuration.text = "~${route.durationMinutes} min"
+        binding.cardDirectionsInfo.visibility = View.VISIBLE
+    }
+
+    private fun hideDirectionsCard() {
+        binding.cardDirectionsInfo.visibility = View.GONE
+        routePolyline?.remove()
+        routePolyline = null
+        currentUserLocation = null
     }
 
     // Calculates the shortest direct route between the user and a target shop.
@@ -406,18 +432,35 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun openDirections(store: StoreLocationDto) {
-        val uri = Uri.parse("google.navigation:q=${store.latitude},${store.longitude}&mode=d")
-        val intent = Intent(Intent.ACTION_VIEW, uri)
-        intent.setPackage("com.google.android.apps.maps")
+        val userLoc = currentUserLocation
 
-        if (intent.resolveActivity(packageManager) != null) {
-            startActivity(intent)
-        } else {
-            // Fallback: open in browser
-            val browserUri = Uri.parse(
-                "https://www.google.com/maps/dir/?api=1&destination=${store.latitude},${store.longitude}&travelmode=driving"
+        // If we have the user's location, provide it as the explicit origin
+        // so Google Maps starts from exactly where we computed the route.
+        val uri = if (userLoc != null) {
+            Uri.parse(
+                "https://www.google.com/maps/dir/?api=1" +
+                "&origin=${userLoc.latitude},${userLoc.longitude}" +
+                "&destination=${store.latitude},${store.longitude}" +
+                "&travelmode=driving"
             )
-            startActivity(Intent(Intent.ACTION_VIEW, browserUri))
+        } else {
+            // No cached location – let Google Maps use its own current location
+            Uri.parse(
+                "https://www.google.com/maps/dir/?api=1" +
+                "&destination=${store.latitude},${store.longitude}" +
+                "&travelmode=driving"
+            )
+        }
+
+        val mapsIntent = Intent(Intent.ACTION_VIEW, uri).apply {
+            setPackage("com.google.android.apps.maps")
+        }
+
+        if (mapsIntent.resolveActivity(packageManager) != null) {
+            startActivity(mapsIntent)
+        } else {
+            // Fallback: open in any browser
+            startActivity(Intent(Intent.ACTION_VIEW, uri))
         }
     }
 

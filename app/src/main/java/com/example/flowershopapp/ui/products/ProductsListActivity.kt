@@ -75,6 +75,7 @@ class ProductsListActivity : AppCompatActivity() {
                 if (response.isSuccessful && response.body()?.success == true) {
                     val count = response.body()?.data?.items?.size ?: 0
                     CartBadgeHelper.updateBadge(binding.tvCartBadge, count)
+                    CartBadgeHelper.updateAppIconBadge(this@ProductsListActivity, count)
                 }
             } catch (_: Exception) { }
         }
@@ -315,6 +316,7 @@ class ProductsListActivity : AppCompatActivity() {
                 if (response.isSuccessful && response.body()?.success == true) {
                     val count = response.body()?.data?.items?.size ?: 0
                     CartBadgeHelper.showCartNotification(this@ProductsListActivity, count)
+                    CartBadgeHelper.updateAppIconBadge(this@ProductsListActivity, count)
                 }
             } catch (_: Exception) { }
         }

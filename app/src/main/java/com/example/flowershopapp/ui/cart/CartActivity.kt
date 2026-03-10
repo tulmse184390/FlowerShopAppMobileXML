@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import com.example.flowershopapp.databinding.ActivityCartBinding
+import com.example.flowershopapp.utils.CartBadgeHelper
 
 class CartActivity : AppCompatActivity() {
 
@@ -74,11 +75,17 @@ class CartActivity : AppCompatActivity() {
 
                 val formatter = java.text.NumberFormat.getNumberInstance(java.util.Locale("vi", "VN"))
                 binding.tvTotalAmount.text = "${formatter.format(cart.totalAmount)} VNĐ"
+
+                // Keep the app-icon badge in sync after quantity / remove changes
+                CartBadgeHelper.updateAppIconBadge(this, cart.items.size)
             } else {
                 binding.rvCartItems.visibility = View.GONE
                 binding.layoutEmptyCart.visibility = View.VISIBLE
                 binding.tvTotalAmount.text = "0 VNĐ"
                 cartAdapter.submitList(emptyList())
+
+                // Cart is empty – remove the badge
+                CartBadgeHelper.updateAppIconBadge(this, 0)
             }
         }
 
@@ -86,4 +93,4 @@ class CartActivity : AppCompatActivity() {
             if (error != null) Toast.makeText(this, error, Toast.LENGTH_SHORT).show()
         }
     }
-}
+}
