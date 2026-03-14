@@ -1,6 +1,7 @@
 package com.example.flowershopapp.ui.products
 
 import android.Manifest
+import android.app.AlertDialog
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
@@ -171,9 +172,76 @@ class ProductsListActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
+        binding.btnOrderHistory.setOnClickListener {
+            openOrderHistory()
+        }
+
+        binding.ivAvatar.setOnClickListener {
+            showProfileDialog()
+        }
+
         binding.btnFloatingChat.setOnClickListener {
             showFloatingChat()
         }
+    }
+
+    private fun openOrderHistory() {
+        val intent = android.content.Intent(
+            this,
+            com.example.flowershopapp.ui.orders.OrderHistoryActivity::class.java
+        )
+        startActivity(intent)
+    }
+
+    private fun showProfileDialog() {
+        val sharedPref = getSharedPreferences("FlowerShopPrefs", Context.MODE_PRIVATE)
+        val token = sharedPref.getString("ACCESS_TOKEN", null)
+
+        val userName = decodeTokenToGetName(token)
+        val userEmail = decodeTokenClaim(token, "email")
+        val userRole = decodeTokenClaim(
+            token,
+            "role",
+            "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
+        )
+
+        val profileInfo = buildString {
+            append(getString(com.example.flowershopapp.R.string.profile_name_text, userName))
+            if (!userEmail.isNullOrBlank()) {
+                append("\n")
+                append(getString(com.example.flowershopapp.R.string.profile_email_text, userEmail))
+            }
+            if (!userRole.isNullOrBlank()) {
+                append("\n")
+                append(getString(com.example.flowershopapp.R.string.profile_role_text, userRole))
+            }
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle(getString(com.example.flowershopapp.R.string.profile_text))
+            .setMessage(profileInfo)
+            .setPositiveButton(getString(com.example.flowershopapp.R.string.logout_text)) { _, _ ->
+                performLogout()
+            }
+            .setNegativeButton(getString(com.example.flowershopapp.R.string.cancel_text), null)
+            .show()
+    }
+
+    private fun performLogout() {
+        getSharedPreferences("FlowerShopPrefs", Context.MODE_PRIVATE)
+            .edit()
+            .remove("ACCESS_TOKEN")
+            .apply()
+
+        val intent = android.content.Intent(
+            this,
+            com.example.flowershopapp.ui.auth.LoginActivity::class.java
+        ).apply {
+            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
+                android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        startActivity(intent)
+        finish()
     }
 
     private fun setupFloatingChat() {
@@ -322,26 +390,34 @@ class ProductsListActivity : AppCompatActivity() {
         }
     }
 
-    private fun decodeTokenToGetName(token: String?): String {
-        if (token.isNullOrEmpty()) return "Guest"
+    private fun decodeTokenPayload(token: String?): JSONObject? {
+        if (token.isNullOrEmpty()) return null
         return try {
             val split = token.split(".")
-            if (split.size < 2) return "User"
+            if (split.size < 2) return null
 
-            val payloadBytes = android.util.Base64.decode(split[1], android.util.Base64.URL_SAFE)
+            val payloadBytes = Base64.decode(split[1], Base64.URL_SAFE)
             val payloadString = String(payloadBytes, Charsets.UTF_8)
-
-            val jsonObject = org.json.JSONObject(payloadString)
-
-            if (jsonObject.has("unique_name")) {
-                jsonObject.getString("unique_name")
-            } else {
-                "User"
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            "User"
+            JSONObject(payloadString)
+        } catch (_: Exception) {
+            null
         }
+    }
+
+    private fun decodeTokenClaim(token: String?, vararg claims: String): String? {
+        val payload = decodeTokenPayload(token) ?: return null
+        claims.forEach { claim ->
+            val value = payload.optString(claim)
+            if (value.isNotBlank() && value.lowercase() != "null") {
+                return value
+            }
+        }
+        return null
+    }
+
+    private fun decodeTokenToGetName(token: String?): String {
+        if (token.isNullOrEmpty()) return "Guest"
+        return decodeTokenClaim(token, "unique_name", "name", "given_name") ?: "User"
     }
 
     private fun updateSortUI(isUpSelected: Boolean) {

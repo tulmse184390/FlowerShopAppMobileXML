@@ -26,6 +26,9 @@
             android:name=".ui.map.MapActivity"
             android:exported="false" />
         <activity
+            android:name=".ui.orders.OrderHistoryActivity"
+            android:exported="false" />
+        <activity
             android:name=".ui.checkout.PaymentSuccessActivity"
             android:exported="false" />
         <activity
