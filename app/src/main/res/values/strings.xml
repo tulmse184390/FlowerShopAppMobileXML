@@ -12,6 +12,12 @@
     <string name="phone_number_text">Phone Number</string>
     <string name="fullname_text">FullName</string>
     <string name="address_text">Address</string>
+    <string name="username_required_text">Username <font color="#D32F2F">*</font></string>
+    <string name="password_required_text">Password <font color="#D32F2F">*</font></string>
+    <string name="confirm_password_required_text">Confirm Password <font color="#D32F2F">*</font></string>
+    <string name="fullname_required_text">FullName <font color="#D32F2F">*</font></string>
+    <string name="phone_number_required_text">Phone Number <font color="#D32F2F">*</font></string>
+    <string name="address_required_text">Address <font color="#D32F2F">*</font></string>
     <string name="welcome_nfullname_text">Welcome,\nFullName</string>
     <string name="logout_text">Log out</string>
     <string name="logout_confirmation_text">Are you sure you want to log out?</string>

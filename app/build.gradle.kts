@@ -51,7 +51,6 @@ dependencies {
     implementation(libs.activity.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.glide)
-    implementation(libs.play.services.maps)
     implementation(libs.play.services.location)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

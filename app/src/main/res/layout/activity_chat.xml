@@ -31,33 +31,19 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <RadioGroup
-            android:id="@+id/rgChatMode"
+        <Switch
+            android:id="@+id/switchAiChat"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
-
-            <RadioButton
-                android:id="@+id/rbAi"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:checked="true"
-                android:text="🤖 AI" />
-
-            <RadioButton
-                android:id="@+id/rbStaff"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:text="👤 Staff" />
-        </RadioGroup>
+            android:checked="true"
+            android:text="AI Respond" />
 
         <TextView
             android:id="@+id/tvChatModeStatus"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:text="🤖 Chatting with AI"
+            android:text="Chatting with AI"
             android:textColor="#888888"
             android:textSize="12sp" />
     </LinearLayout>
@@ -95,4 +81,4 @@
 
     </LinearLayout>
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

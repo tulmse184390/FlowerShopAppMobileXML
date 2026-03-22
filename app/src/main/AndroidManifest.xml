@@ -18,10 +18,6 @@
         android:theme="@style/Theme.FlowerShopApp"
         android:usesCleartextTraffic="true">
 
-        <meta-data
-            android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyBKBhOjxHKMJdwbP5nZJtS-3jwMiR3f8lg" />
-
         <activity
             android:name=".ui.map.MapActivity"
             android:exported="false" />
@@ -63,6 +59,12 @@
             android:exported="true" />
         <activity
             android:name=".ui.chat.ChatActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.chat.StaffChatRoomListActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.chat.StaffChatDetailActivity"
             android:exported="false" />
     </application>
 

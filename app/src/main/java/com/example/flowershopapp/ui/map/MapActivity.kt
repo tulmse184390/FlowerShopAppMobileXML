@@ -9,50 +9,44 @@ import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
+import android.webkit.JavascriptInterface
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import com.example.flowershopapp.R
 import com.example.flowershopapp.data.model.StoreLocationDto
 import com.example.flowershopapp.databinding.ActivityMapBinding
-import com.google.android.gms.location.LocationServices
-import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.GoogleMap
-import com.google.android.gms.maps.OnMapReadyCallback
-import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.LatLngBounds
-import com.google.android.gms.maps.model.Marker
-import com.google.android.gms.maps.model.MarkerOptions
-import com.google.android.gms.maps.model.Polyline
-import com.google.android.gms.maps.model.PolylineOptions
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
+import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.gson.Gson
 import kotlin.math.roundToInt
 
-class MapActivity : AppCompatActivity(), OnMapReadyCallback {
+class MapActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMapBinding
     private val viewModel: MapViewModel by viewModels()
     private lateinit var storeAdapter: StoreLocationAdapter
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<View>
-    private var googleMap: GoogleMap? = null
+    private var isMapReady = false
     private var selectedStore: StoreLocationDto? = null
-    private var routePolyline: Polyline? = null
     private val allStores = mutableListOf<StoreLocationDto>()
     private val filteredStores = mutableListOf<StoreLocationDto>()
-    private val markerMap = mutableMapOf<Int, Marker>()
     private val fusedLocationClient by lazy { LocationServices.getFusedLocationProviderClient(this) }
     private var pendingDirectionsStore: StoreLocationDto? = null
-    private var currentUserLocation: LatLng? = null   // remembered for the Navigate button
+    private var currentUserLocation: SimpleLatLng? = null
+    private val gson = Gson()
+
+    data class SimpleLatLng(val lat: Double, val lng: Double)
 
     private data class RouteResult(
-        val path: List<LatLng>,
+        val path: List<SimpleLatLng>,
         val distanceKm: Double,
         val durationMinutes: Int
     )
@@ -77,11 +71,44 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
         setupBottomSheet()
         setupUI()
         setupObservers()
-
-        val mapFragment = supportFragmentManager.findFragmentById(R.id.mapFragment) as SupportMapFragment
-        mapFragment.getMapAsync(this)
+        setupWebView()
 
         viewModel.fetchStores()
+        requestLocationPermission()
+    }
+
+    private fun setupWebView() {
+        binding.mapWebView.settings.javaScriptEnabled = true
+        binding.mapWebView.settings.domStorageEnabled = true
+        binding.mapWebView.addJavascriptInterface(WebAppInterface(), "Android")
+        binding.mapWebView.webViewClient = object : WebViewClient() {
+            override fun onPageFinished(view: WebView?, url: String?) {
+                isMapReady = true
+                updateMapPadding()
+                // In case stores loaded before WebView finished
+                if (filteredStores.isNotEmpty()) {
+                    addStoreMarkers(filteredStores)
+                } else if (viewModel.stores.value?.isNotEmpty() == true) {
+                    allStores.clear()
+                    allStores.addAll(viewModel.stores.value!!)
+                    applyStoreFilter(binding.edtStoreSearch.text?.toString().orEmpty())
+                }
+            }
+        }
+        binding.mapWebView.loadUrl("file:///android_asset/leaflet_map.html")
+    }
+
+    inner class WebAppInterface {
+        @JavascriptInterface
+        fun onMarkerClick(storeId: Int) {
+            runOnUiThread {
+                val store = allStores.find { it.locationId == storeId }
+                if (store != null) {
+                    bottomSheetBehavior.state = BottomSheetBehavior.STATE_HALF_EXPANDED
+                    focusOnStore(store)
+                }
+            }
+        }
     }
 
     private fun setupBottomSheet() {
@@ -111,7 +138,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
             }
         })
 
-        // Tap on collapsed sheet / search bar -> expand to half
         binding.searchBarContainer.setOnClickListener {
             if (bottomSheetBehavior.state == BottomSheetBehavior.STATE_COLLAPSED) {
                 bottomSheetBehavior.state = BottomSheetBehavior.STATE_HALF_EXPANDED
@@ -122,7 +148,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
                 bottomSheetBehavior.state = BottomSheetBehavior.STATE_HALF_EXPANDED
             }
         }
-        // Focus on search also expands
         binding.edtStoreSearch.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus && bottomSheetBehavior.state == BottomSheetBehavior.STATE_COLLAPSED) {
                 bottomSheetBehavior.state = BottomSheetBehavior.STATE_HALF_EXPANDED
@@ -131,11 +156,13 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun updateMapPadding() {
-        val map = googleMap ?: return
+        if (!isMapReady) return
         val sheetTop = binding.bottomSheet.top
         val parentHeight = binding.root.height
         val bottomPad = parentHeight - sheetTop
-        map.setPadding(0, 0, 0, bottomPad.coerceAtLeast(0))
+        val safeBottomPad = bottomPad.coerceAtLeast(0)
+        
+        binding.mapWebView.evaluateJavascript("setMapPadding($safeBottomPad);", null)
     }
 
     private fun setupUI() {
@@ -161,7 +188,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
             override fun afterTextChanged(s: Editable?) = Unit
         })
 
-        // ── Directions card buttons ──────────────────────────────────────────
         binding.btnNavigate.setOnClickListener {
             val store = selectedStore ?: return@setOnClickListener
             openDirections(store)
@@ -190,93 +216,15 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
-    override fun onMapReady(map: GoogleMap) {
-        googleMap = map
-
-        map.uiSettings.isZoomControlsEnabled = true
-        map.uiSettings.isMapToolbarEnabled = true
-        map.uiSettings.isZoomGesturesEnabled = true
-        map.uiSettings.isScrollGesturesEnabled = true
-        map.uiSettings.isRotateGesturesEnabled = true
-        map.uiSettings.isTiltGesturesEnabled = true
-
-        requestLocationPermission()
-        updateMapPadding()
-
-        // Tap on map -> collapse the bottom sheet
-        map.setOnMapClickListener {
-            if (bottomSheetBehavior.state != BottomSheetBehavior.STATE_COLLAPSED) {
-                bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
-            }
-        }
-
-        map.setOnMarkerClickListener { marker ->
-            val store = marker.tag as? StoreLocationDto
-            if (store != null) {
-                focusOnStore(store)
-            }
-            true
-        }
-
-        // If stores already loaded before map was ready
-        if (filteredStores.isNotEmpty()) {
-            addStoreMarkers(filteredStores)
-        } else {
-            viewModel.stores.value?.let { stores ->
-                if (stores.isNotEmpty()) {
-                    allStores.clear()
-                    allStores.addAll(stores)
-                    applyStoreFilter(binding.edtStoreSearch.text?.toString().orEmpty())
-                }
-            }
-        }
-    }
-
     private fun addStoreMarkers(stores: List<StoreLocationDto>) {
-        val map = googleMap ?: return
-        map.clear()
-        routePolyline = null
-        markerMap.clear()
-        // Hide any stale directions card when map markers are redrawn
+        if (!isMapReady) return
+        
         binding.cardDirectionsInfo.visibility = View.GONE
         currentUserLocation = null
-
-        if (stores.isEmpty()) {
-            return
-        }
-
-        val boundsBuilder = LatLngBounds.Builder()
-
-        for (store in stores) {
-            val position = LatLng(store.latitude, store.longitude)
-            val marker = map.addMarker(
-                MarkerOptions()
-                    .position(position)
-                    .title(store.storeName ?: "Store")
-                    .snippet(store.address ?: "")
-            )
-            marker?.tag = store
-            if (marker != null) {
-                markerMap[store.locationId] = marker
-            }
-            boundsBuilder.include(position)
-        }
-
-        try {
-            val bounds = boundsBuilder.build()
-            val padding = 60
-            map.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, padding))
-        } catch (_: Exception) {
-            // Single store or no stores - zoom to first
-            if (stores.isNotEmpty()) {
-                val first = stores[0]
-                map.animateCamera(
-                    CameraUpdateFactory.newLatLngZoom(
-                        LatLng(first.latitude, first.longitude), 14f
-                    )
-                )
-            }
-        }
+        
+        val json = gson.toJson(stores)
+        val escapedJson = json.replace("\\", "\\\\").replace("'", "\\'")
+        binding.mapWebView.evaluateJavascript("addMarkers('$escapedJson');", null)
     }
 
     private fun applyStoreFilter(keyword: String) {
@@ -307,14 +255,9 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
         selectedStore = store
         storeAdapter.selectStore(store.locationId)
 
-        val target = LatLng(store.latitude, store.longitude)
-        val marker = markerMap[store.locationId]
-        marker?.showInfoWindow()
-
-        // Delay camera move slightly so map padding has updated after sheet state change
-        binding.root.postDelayed({
-            googleMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(target, 15f))
-        }, 150)
+        if (isMapReady) {
+            binding.mapWebView.evaluateJavascript("focusOnStore(${store.latitude}, ${store.longitude}, ${store.locationId});", null)
+        }
     }
 
     private fun handleDirections(targetShop: StoreLocationDto) {
@@ -333,7 +276,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
                 if (location != null) {
                     onUserLocationObtained(location, targetShop)
                 } else {
-                    // lastLocation can be null; request a fresh fix
                     requestFreshLocation(targetShop)
                 }
             }
@@ -363,8 +305,12 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun onUserLocationObtained(location: Location, targetShop: StoreLocationDto) {
-        val userLocation = LatLng(location.latitude, location.longitude)
+        val userLocation = SimpleLatLng(location.latitude, location.longitude)
         currentUserLocation = userLocation
+
+        if (isMapReady) {
+            binding.mapWebView.evaluateJavascript("showUserLocation(${location.latitude}, ${location.longitude});", null)
+        }
 
         val route = findShortestPath(userLocation, targetShop)
         drawRoute(route)
@@ -383,21 +329,21 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun hideDirectionsCard() {
         binding.cardDirectionsInfo.visibility = View.GONE
-        routePolyline?.remove()
-        routePolyline = null
+        if (isMapReady) {
+            binding.mapWebView.evaluateJavascript("clearRoute();", null)
+        }
         currentUserLocation = null
     }
 
-    // Calculates the shortest direct route between the user and a target shop.
-    private fun findShortestPath(userLocation: LatLng, targetShop: StoreLocationDto): RouteResult {
-        val target = LatLng(targetShop.latitude, targetShop.longitude)
+    private fun findShortestPath(userLocation: SimpleLatLng, targetShop: StoreLocationDto): RouteResult {
+        val target = SimpleLatLng(targetShop.latitude, targetShop.longitude)
 
         val results = FloatArray(1)
         Location.distanceBetween(
-            userLocation.latitude,
-            userLocation.longitude,
-            target.latitude,
-            target.longitude,
+            userLocation.lat,
+            userLocation.lng,
+            target.lat,
+            target.lng,
             results
         )
 
@@ -415,36 +361,23 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun drawRoute(route: RouteResult) {
-        val map = googleMap ?: return
-        routePolyline?.remove()
-
-        routePolyline = map.addPolyline(
-            PolylineOptions()
-                .addAll(route.path)
-                .color(android.graphics.Color.parseColor("#F4487D"))
-                .width(12f)
-                .geodesic(true)
-        )
-
-        val boundsBuilder = LatLngBounds.Builder()
-        route.path.forEach { boundsBuilder.include(it) }
-        map.animateCamera(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 120))
+        if (!isMapReady) return
+        val json = gson.toJson(route.path)
+        val escapedJson = json.replace("\\", "\\\\").replace("'", "\\'")
+        binding.mapWebView.evaluateJavascript("drawRoute('$escapedJson');", null)
     }
 
     private fun openDirections(store: StoreLocationDto) {
         val userLoc = currentUserLocation
 
-        // If we have the user's location, provide it as the explicit origin
-        // so Google Maps starts from exactly where we computed the route.
         val uri = if (userLoc != null) {
             Uri.parse(
                 "https://www.google.com/maps/dir/?api=1" +
-                "&origin=${userLoc.latitude},${userLoc.longitude}" +
+                "&origin=${userLoc.lat},${userLoc.lng}" +
                 "&destination=${store.latitude},${store.longitude}" +
                 "&travelmode=driving"
             )
         } else {
-            // No cached location – let Google Maps use its own current location
             Uri.parse(
                 "https://www.google.com/maps/dir/?api=1" +
                 "&destination=${store.latitude},${store.longitude}" +
@@ -459,7 +392,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
         if (mapsIntent.resolveActivity(packageManager) != null) {
             startActivity(mapsIntent)
         } else {
-            // Fallback: open in any browser
             startActivity(Intent(Intent.ACTION_VIEW, uri))
         }
     }
@@ -482,11 +414,8 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun enableMyLocation() {
-        val map = googleMap ?: return
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-            == PackageManager.PERMISSION_GRANTED
-        ) {
-            map.isMyLocationEnabled = true
+        if (isMapReady) {
+            // Leaflet user location tracking logic if needed
         }
     }
 }

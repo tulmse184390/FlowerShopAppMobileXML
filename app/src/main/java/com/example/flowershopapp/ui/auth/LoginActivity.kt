@@ -43,7 +43,12 @@ class LoginActivity : AppCompatActivity() {
                 val sharedPref = getSharedPreferences("FlowerShopPrefs", Context.MODE_PRIVATE)
                 sharedPref.edit().putString("ACCESS_TOKEN", token).apply()
 
-                startActivity(Intent(this, ProductsListActivity::class.java))
+                val role = decodeTokenClaim(token, "role", "http://schemas.microsoft.com/ws/2008/06/identity/claims/role")
+                if (role?.uppercase() == "STAFF") {
+                    startActivity(Intent(this, com.example.flowershopapp.ui.chat.StaffChatRoomListActivity::class.java))
+                } else {
+                    startActivity(Intent(this, ProductsListActivity::class.java))
+                }
                 finish()
             }
         }
@@ -66,6 +71,26 @@ class LoginActivity : AppCompatActivity() {
             }
 
             viewModel.login(email, password)
+        }
+    }
+
+    private fun decodeTokenClaim(token: String?, vararg claims: String): String? {
+        if (token.isNullOrEmpty()) return null
+        return try {
+            val split = token.split(".")
+            if (split.size < 2) return null
+            val payloadBytes = android.util.Base64.decode(split[1], android.util.Base64.URL_SAFE)
+            val payloadString = String(payloadBytes, Charsets.UTF_8)
+            val payload = org.json.JSONObject(payloadString)
+            for (claim in claims) {
+                val value = payload.optString(claim)
+                if (value.isNotBlank() && value.lowercase() != "null") {
+                    return value
+                }
+            }
+            null
+        } catch (_: Exception) {
+            null
         }
     }
 }

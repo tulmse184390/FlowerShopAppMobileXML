@@ -254,6 +254,7 @@ class ProductsListActivity : AppCompatActivity() {
             adapter = chatAdapter
         }
 
+        chatViewModel.loadMyHistory(token)
         chatViewModel.connectToChatHub(token)
 
         binding.chatOutsideOverlay.setOnClickListener {
@@ -282,10 +283,11 @@ class ProductsListActivity : AppCompatActivity() {
         }
 
         // Update status label when customer switches chat mode
-        binding.rgChatMode.setOnCheckedChangeListener { _, checkedId ->
-            when (checkedId) {
-                binding.rbAi.id -> binding.tvChatModeStatus.text = "🤖 Chatting with AI"
-                binding.rbStaff.id -> binding.tvChatModeStatus.text = "👤 Waiting for staff"
+        binding.switchAiChat.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                binding.tvChatModeStatus.text = "Chatting with AI"
+            } else {
+                binding.tvChatModeStatus.text = "Waiting for staff"
             }
         }
 
@@ -301,6 +303,12 @@ class ProductsListActivity : AppCompatActivity() {
                 Toast.makeText(this, error, Toast.LENGTH_SHORT).show()
             }
         }
+
+        chatViewModel.aiChatStatus.observe(this) { isAI ->
+            if (binding.switchAiChat.isChecked != isAI) {
+                binding.switchAiChat.isChecked = isAI
+            }
+        }
     }
 
     private fun sendFloatingMessage() {
@@ -310,7 +318,7 @@ class ProductsListActivity : AppCompatActivity() {
             return
         }
 
-        if (binding.rbAi.isChecked) {
+        if (binding.switchAiChat.isChecked) {
             chatViewModel.sendMessage(message)       // AI path → SendMessageToShop
         } else {
             chatViewModel.sendMessageToStaff(message) // Staff path → SendMessageToStaff

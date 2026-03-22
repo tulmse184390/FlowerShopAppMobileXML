@@ -26,6 +26,7 @@ class ChatActivity : AppCompatActivity() {
         setupUI()
         setupObservers()
 
+        viewModel.loadMyHistory(userToken)
         viewModel.connectToChatHub(userToken)
     }
 
@@ -37,33 +38,43 @@ class ChatActivity : AppCompatActivity() {
         }
 
         // Update status label when mode changes
-        binding.rgChatMode.setOnCheckedChangeListener { _, checkedId ->
-            when (checkedId) {
-                binding.rbAi.id -> binding.tvChatModeStatus.text = "🤖 Chatting with AI"
-                binding.rbStaff.id -> binding.tvChatModeStatus.text = "👤 Waiting for staff"
+        binding.switchAiChat.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                binding.tvChatModeStatus.text = "Chatting with AI"
+            } else {
+                binding.tvChatModeStatus.text = "Waiting for staff"
             }
         }
 
         binding.btnSend.setOnClickListener {
             val message = binding.edtMessage.text.toString().trim()
             if (message.isNotEmpty()) {
-                if (binding.rbAi.isChecked) {
-                    viewModel.sendMessage(message)         // AI path → SendMessageToShop
+                if (binding.switchAiChat.isChecked) {
+                    viewModel.sendMessage(message)
                 } else {
-                    viewModel.sendMessageToStaff(message)  // Staff path → SendMessageToStaff
+                    viewModel.sendMessageToStaff(message)
                 }
                 binding.edtMessage.text.clear()
-            } else {
-                Toast.makeText(this, "Message cannot be empty", Toast.LENGTH_SHORT).show()
+            }
+            // Silently ignore if empty (prevents double-tap showing toast)
+        }
+
+        // Auto-scroll when keyboard opens
+        binding.rvMessages.addOnLayoutChangeListener { _, _, _, _, bottom, _, _, _, oldBottom ->
+            if (bottom < oldBottom && chatAdapter.itemCount > 0) {
+                binding.rvMessages.postDelayed({
+                    binding.rvMessages.smoothScrollToPosition(chatAdapter.itemCount - 1)
+                }, 100)
             }
         }
     }
 
     private fun setupObservers() {
         viewModel.messages.observe(this) { messages ->
-            chatAdapter.submitList(messages)
-            if (messages.isNotEmpty()) {
-                binding.rvMessages.scrollToPosition(messages.size - 1)
+            chatAdapter.submitList(messages) {
+                if (messages.isNotEmpty()) {
+                    binding.rvMessages.scrollToPosition(messages.size - 1)
+                }
             }
         }
 
@@ -72,10 +83,16 @@ class ChatActivity : AppCompatActivity() {
                 Toast.makeText(this, error, Toast.LENGTH_SHORT).show()
             }
         }
+
+        viewModel.aiChatStatus.observe(this) { isAI ->
+            if (binding.switchAiChat.isChecked != isAI) {
+                binding.switchAiChat.isChecked = isAI
+            }
+        }
     }
 
     override fun onDestroy() {
         super.onDestroy()
         viewModel.disconnectFromChatHub()
     }
-}
+}

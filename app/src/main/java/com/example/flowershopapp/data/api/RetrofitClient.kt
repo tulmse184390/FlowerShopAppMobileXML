@@ -33,6 +33,10 @@ object RetrofitClient {
         retrofit.create(StoreApiService::class.java)
     }
 
+    val chatApi: ChatApiService by lazy {
+        retrofit.create(ChatApiService::class.java)
+    }
+
     val retrofitInstance: Retrofit
         get() = retrofit
 }
